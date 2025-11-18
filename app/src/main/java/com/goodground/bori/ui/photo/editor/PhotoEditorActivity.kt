@@ -1,109 +1,104 @@
 package com.goodground.bori.ui.photo.editor
 
+import android.app.Activity
+import android.content.Intent
 import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.ColorMatrix
-import android.graphics.ColorMatrixColorFilter
-import android.graphics.Paint
-import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
-import android.widget.ImageView
-import android.widget.SeekBar
+import android.view.View
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import com.goodground.bori.databinding.ActivityImageEditorBinding
+import com.goodground.bori.R
+import com.goodground.bori.databinding.ActivityPhotoEditorBinding
+import com.google.android.material.bottomsheet.BottomSheetDialog
 
 class PhotoEditorActivity : AppCompatActivity() {
 
-    private lateinit var binding: ActivityImageEditorBinding
-    private lateinit var ivPreview: ImageView
-    private lateinit var originalBitmap: Bitmap
+    private lateinit var binding: ActivityPhotoEditorBinding
+    private lateinit var resultLauncher: ActivityResultLauncher<Intent>
+
+    private var selectedBitmap: Bitmap? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityImageEditorBinding.inflate(layoutInflater)
+        binding = ActivityPhotoEditorBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        ivPreview = binding.ivPreview
-
-        val uri = Uri.parse(intent.getStringExtra("imageUri"))
-        originalBitmap = MediaStore.Images.Media.getBitmap(contentResolver, uri)
-        ivPreview.setImageBitmap(originalBitmap)
-
-        initSliders()
+        setupResultLauncher()
+        setupUI()
     }
 
-    private fun initSliders() {
-        binding.sbBrightness.apply {
-            progress = 100
-            setOnSeekBarChangeListener(changeListener)
-        }
-        binding.sbContrast.apply {
-            progress = 100
-            setOnSeekBarChangeListener(changeListener)
-        }
-        binding.sbSaturation.apply {
-            progress = 100
-            setOnSeekBarChangeListener(changeListener)
+    private fun setupUI() {
+        // 처음엔 placeholder
+        binding.imageView.setImageResource(R.drawable.ic_bori)
+
+        // 이미지 선택 버튼
+        binding.fabSelectImage.setOnClickListener {
+            showImageSelectSheet()
         }
     }
 
-    private val changeListener = object : SeekBar.OnSeekBarChangeListener {
-        override fun onProgressChanged(seekBar: SeekBar?, value: Int, fromUser: Boolean) {
-            applyAdjustments()
-        }
+    private fun setupResultLauncher() {
+        resultLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                val data = result.data
 
-        override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-        override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+                // 갤러리 이미지
+                if (data?.data != null) {
+                    val uri = data.data!!
+                    selectedBitmap = MediaStore.Images.Media.getBitmap(contentResolver, uri)
+                    binding.imageView.setImageBitmap(selectedBitmap)
+                }
+
+                // 카메라 이미지
+                if (data?.extras?.get("data") != null) {
+                    selectedBitmap = data.extras!!.get("data") as Bitmap
+                    binding.imageView.setImageBitmap(selectedBitmap)
+                }
+
+                enableTools()
+            }
+        }
     }
 
-    private fun applyAdjustments() {
-        val brightness = binding.sbBrightness.progress - 100
-        val contrast = binding.sbContrast.progress / 100f
-        val saturation = binding.sbSaturation.progress / 100f
+    private fun showImageSelectSheet() {
+        val dialog = BottomSheetDialog(this)
+        val view = layoutInflater.inflate(R.layout.sheet_image_select, null)
 
-        val cm = ColorMatrix()
+        view.findViewById<View>(R.id.btnGallery).setOnClickListener {
+            openGallery()
+            dialog.dismiss()
+        }
 
-        // 🔥 Saturation
-        val satMatrix = ColorMatrix()
-        satMatrix.setSaturation(saturation)
-        cm.postConcat(satMatrix)
+        view.findViewById<View>(R.id.btnCamera).setOnClickListener {
+            openCamera()
+            dialog.dismiss()
+        }
 
-        // 🔥 Brightness
-        val bMatrix = ColorMatrix(
-            floatArrayOf(
-                1f, 0f, 0f, 0f, brightness.toFloat(),
-                0f, 1f, 0f, 0f, brightness.toFloat(),
-                0f, 0f, 1f, 0f, brightness.toFloat(),
-                0f, 0f, 0f, 1f, 0f
-            )
-        )
-        cm.postConcat(bMatrix)
+        view.findViewById<View>(R.id.btnCancel).setOnClickListener {
+            dialog.dismiss()
+        }
 
-        // 🔥 Contrast
-        val c = contrast
-        val translate = (1 - c) * 128
-        val contrastMatrix = ColorMatrix(
-            floatArrayOf(
-                c, 0f, 0f, 0f, translate,
-                0f, c, 0f, 0f, translate,
-                0f, 0f, c, 0f, translate,
-                0f, 0f, 0f, 1f, 0f
-            )
-        )
-        cm.postConcat(contrastMatrix)
+        dialog.setContentView(view)
+        dialog.show()
+    }
 
-        val filtered = Bitmap.createBitmap(
-            originalBitmap.width,
-            originalBitmap.height,
-            originalBitmap.config
-        )
+    private fun openGallery() {
+        val intent = Intent(Intent.ACTION_PICK)
+        intent.type = "image/*"
+        resultLauncher.launch(intent)
+    }
 
-        val canvas = Canvas(filtered)
-        val paint = Paint()
-        paint.colorFilter = ColorMatrixColorFilter(cm)
-        canvas.drawBitmap(originalBitmap, 0f, 0f, paint)
+    private fun openCamera() {
+        val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+        resultLauncher.launch(intent)
+    }
 
-        ivPreview.setImageBitmap(filtered)
+    private fun enableTools() {
+        // 이미지 편집용 기능 활성화
+        binding.editTools.visibility = View.VISIBLE
     }
 }

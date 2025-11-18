@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+    <androidx.coordinatorlayout.widget.CoordinatorLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <!-- 편집 이미지 -->
+        <ImageView
+            android:id="@+id/imageView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="fitCenter"
+            android:padding="16dp"
+            android:contentDescription="Image Preview"/>
+
+        <!-- 편집 도구 (초기에는 숨김) -->
+        <LinearLayout
+            android:id="@+id/editTools"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:layout_gravity="bottom"
+            android:gravity="center"
+            android:background="#AA000000"
+            android:visibility="gone">
+
+            <!-- 밝기/대비/채도/필터 등 좌우 스크롤 ToolBar 추가 예정 -->
+        </LinearLayout>
+
+        <!-- 이미지 선택 Floating Button -->
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/fabSelectImage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|end"
+            android:layout_margin="20dp"
+            android:src="@android:drawable/ic_menu_gallery"
+            android:contentDescription="Select Image"
+            />
+
+    </androidx.coordinatorlayout.widget.CoordinatorLayout>
