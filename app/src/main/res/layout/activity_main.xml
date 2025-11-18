@@ -1,19 +1,55 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/main"
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="24dp"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".MainActivity">
+    android:background="#FAFAFA">
 
+    <!-- 앱 로고 -->
+    <ImageView
+        android:id="@+id/ivLogo"
+        android:layout_width="120dp"
+        android:layout_height="120dp"
+        android:src="@drawable/ic_bori"
+        android:contentDescription="Bori Logo"
+        android:layout_marginBottom="32dp"/>
+
+    <!-- 앱 이름 -->
     <TextView
+        android:id="@+id/tvAppName"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Hello World!"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        android:text="B O R I"
+        android:textSize="26sp"
+        android:textStyle="bold"
+        android:textColor="#333333"
+        android:letterSpacing="0.1"
+        android:layout_marginBottom="40dp"/>
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+    <!-- 사진 편집 버튼 -->
+    <Button
+        android:id="@+id/btnEditPhoto"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="사진 편집하기"
+        android:backgroundTint="#F7C062"
+        android:textStyle="bold"
+        android:textColor="#FFFFFF"
+        android:padding="16dp"
+        android:layout_marginBottom="16dp"/>
+
+    <!-- 추가 기능을 위한 버튼 자리 (현재는 숨김) -->
+    <Button
+        android:id="@+id/btnEditVideo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="영상 편집하기 (준비중)"
+        android:backgroundTint="#CCCCCC"
+        android:textColor="#666666"
+        android:padding="16dp"
+        android:visibility="gone"/>
+
+</LinearLayout>
