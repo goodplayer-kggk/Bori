@@ -3,9 +3,14 @@ package com.goodground.bori.ui.photo.editor
 import android.app.Activity
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
+import android.graphics.Paint
 import android.os.Bundle
 import android.provider.MediaStore
 import android.view.View
+import android.widget.SeekBar
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -19,6 +24,8 @@ class PhotoEditorActivity : AppCompatActivity() {
     private lateinit var resultLauncher: ActivityResultLauncher<Intent>
 
     private var selectedBitmap: Bitmap? = null
+    private lateinit var originalBitmap: Bitmap
+    private lateinit var editedBitmap: Bitmap
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -27,6 +34,17 @@ class PhotoEditorActivity : AppCompatActivity() {
 
         setupResultLauncher()
         setupUI()
+
+        binding.seekBrightness.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                val value = progress - 100   // -100 ~ +100
+                editedBitmap = applyBrightness(originalBitmap, value)
+                binding.imageView.setImageBitmap(editedBitmap)
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
     }
 
     private fun setupUI() {
@@ -58,6 +76,9 @@ class PhotoEditorActivity : AppCompatActivity() {
                     selectedBitmap = data.extras!!.get("data") as Bitmap
                     binding.imageView.setImageBitmap(selectedBitmap)
                 }
+
+                // 갤러리에서 받아온 Bitmap 넣기
+                originalBitmap = selectedBitmap?.copy(Bitmap.Config.ARGB_8888, true)!!
 
                 enableTools()
             }
@@ -100,5 +121,27 @@ class PhotoEditorActivity : AppCompatActivity() {
     private fun enableTools() {
         // 이미지 편집용 기능 활성화
         binding.editTools.visibility = View.VISIBLE
+    }
+
+    private fun applyBrightness(bitmap: Bitmap, brightness: Int): Bitmap {
+        val bmp = Bitmap.createBitmap(bitmap.width, bitmap.height, bitmap.config)
+        val canvas = Canvas(bmp)
+
+        // ColorMatrix 적용
+        val brightnessMatrix = ColorMatrix(
+            floatArrayOf(
+                1f, 0f, 0f, 0f, brightness.toFloat(),
+                0f, 1f, 0f, 0f, brightness.toFloat(),
+                0f, 0f, 1f, 0f, brightness.toFloat(),
+                0f, 0f, 0f, 1f, 0f
+            )
+        )
+
+        val paint = Paint().apply {
+            colorFilter = ColorMatrixColorFilter(brightnessMatrix)
+        }
+
+        canvas.drawBitmap(bitmap, 0f, 0f, paint)
+        return bmp
     }
 }

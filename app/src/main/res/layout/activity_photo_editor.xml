@@ -21,10 +21,26 @@
             android:layout_height="60dp"
             android:layout_gravity="bottom"
             android:gravity="center"
-            android:background="#AA000000"
+            android:background="#F4C542"
             android:visibility="gone">
 
             <!-- 밝기/대비/채도/필터 등 좌우 스크롤 ToolBar 추가 예정 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Brightness "/>
+                <SeekBar
+                    android:id="@+id/seekBrightness"
+                    android:layout_width="200dp"
+                    android:layout_height="wrap_content"
+                    android:max="200"
+                    android:progress="100"/>
+            </LinearLayout>
+
         </LinearLayout>
 
         <!-- 이미지 선택 Floating Button -->
