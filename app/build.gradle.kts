@@ -58,4 +58,9 @@ dependencies {
 
     // Kotlin Coroutines
     implementation ("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+
+    implementation ("com.airbnb.android:lottie:6.4.0")
+
+    // AdMob (Google Mobile Ads SDK)
+    implementation ("com.google.android.gms:play-services-ads:23.1.0")
 }

@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import com.goodground.bori.databinding.ActivityMainBinding
 import com.goodground.bori.ui.photo.editor.PhotoEditorActivity
+import com.google.android.gms.ads.AdRequest
 
 class MainActivity : AppCompatActivity() {
 
@@ -19,5 +20,12 @@ class MainActivity : AppCompatActivity() {
             val intent = Intent(this, PhotoEditorActivity::class.java)
             startActivity(intent)
         }
+
+        setupBannerAd()
+    }
+
+    private fun setupBannerAd() {
+        val adRequest = AdRequest.Builder().build()
+        binding.adView.loadAd(adRequest)
     }
 }
