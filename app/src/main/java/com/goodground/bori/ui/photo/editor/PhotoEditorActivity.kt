@@ -26,6 +26,7 @@ class PhotoEditorActivity : AppCompatActivity() {
     private var selectedBitmap: Bitmap? = null
     private lateinit var originalBitmap: Bitmap
     private lateinit var editedBitmap: Bitmap
+    private var currentContrast = 0f
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,6 +46,12 @@ class PhotoEditorActivity : AppCompatActivity() {
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
+
+        binding.sliderContrast.addOnChangeListener { _, value, _ ->
+            currentContrast = value
+            editedBitmap = applyContrast(originalBitmap, value)
+            binding.imageView.setImageBitmap(editedBitmap)
+        }
     }
 
     private fun setupUI() {
@@ -143,5 +150,27 @@ class PhotoEditorActivity : AppCompatActivity() {
 
         canvas.drawBitmap(bitmap, 0f, 0f, paint)
         return bmp
+    }
+
+    private fun applyContrast(src: Bitmap, value: Float): Bitmap {
+        // value: -100 ~ +100
+        val contrast = (value + 100) / 100f   // 0.0 ~ 2.0
+
+        val cm = ColorMatrix(
+            floatArrayOf(
+                contrast, 0f, 0f, 0f, 0f,
+                0f, contrast, 0f, 0f, 0f,
+                0f, 0f, contrast, 0f, 0f,
+                0f, 0f, 0f, 1f, 0f
+            )
+        )
+
+        val ret = Bitmap.createBitmap(src.width, src.height, src.config)
+        val canvas = Canvas(ret)
+        val paint = Paint()
+        paint.colorFilter = ColorMatrixColorFilter(cm)
+        canvas.drawBitmap(src, 0f, 0f, paint)
+
+        return ret
     }
 }
