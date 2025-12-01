@@ -3,14 +3,11 @@ package com.goodground.bori.ui.photo.editor
 import android.app.Activity
 import android.content.Intent
 import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.ColorMatrix
-import android.graphics.ColorMatrixColorFilter
-import android.graphics.Paint
 import android.os.Bundle
 import android.provider.MediaStore
 import android.view.View
 import android.widget.SeekBar
+import android.widget.TextView
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -28,6 +25,8 @@ class PhotoEditorActivity : AppCompatActivity() {
     private lateinit var editedBitmap: Bitmap
     private var currentContrast = 0f
 
+    private lateinit var bottomSheet: BottomSheetDialog
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityPhotoEditorBinding.inflate(layoutInflater)
@@ -36,22 +35,8 @@ class PhotoEditorActivity : AppCompatActivity() {
         setupResultLauncher()
         setupUI()
 
-        binding.seekBrightness.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                val value = progress - 100   // -100 ~ +100
-                editedBitmap = applyBrightness(originalBitmap, value)
-                binding.imageView.setImageBitmap(editedBitmap)
-            }
-
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
-        })
-
-        binding.sliderContrast.addOnChangeListener { _, value, _ ->
-            currentContrast = value
-            editedBitmap = applyContrast(originalBitmap, value)
-            binding.imageView.setImageBitmap(editedBitmap)
-        }
+        bottomSheet = BottomSheetDialog(this)
+        setupToolButtons()
     }
 
     private fun setupUI() {
@@ -87,7 +72,7 @@ class PhotoEditorActivity : AppCompatActivity() {
                 // 갤러리에서 받아온 Bitmap 넣기
                 originalBitmap = selectedBitmap?.copy(Bitmap.Config.ARGB_8888, true)!!
 
-                enableTools()
+//                enableTools()
             }
         }
     }
@@ -125,52 +110,65 @@ class PhotoEditorActivity : AppCompatActivity() {
         resultLauncher.launch(intent)
     }
 
-    private fun enableTools() {
-        // 이미지 편집용 기능 활성화
-        binding.editTools.visibility = View.VISIBLE
-    }
-
-    private fun applyBrightness(bitmap: Bitmap, brightness: Int): Bitmap {
-        val bmp = Bitmap.createBitmap(bitmap.width, bitmap.height, bitmap.config)
-        val canvas = Canvas(bmp)
-
-        // ColorMatrix 적용
-        val brightnessMatrix = ColorMatrix(
-            floatArrayOf(
-                1f, 0f, 0f, 0f, brightness.toFloat(),
-                0f, 1f, 0f, 0f, brightness.toFloat(),
-                0f, 0f, 1f, 0f, brightness.toFloat(),
-                0f, 0f, 0f, 1f, 0f
-            )
-        )
-
-        val paint = Paint().apply {
-            colorFilter = ColorMatrixColorFilter(brightnessMatrix)
+    private fun setupToolButtons() {
+        binding.btnBrightness.setOnClickListener {
+            openAdjustmentSheet("밝기") { value ->
+                applyBrightness(value)
+            }
         }
 
-        canvas.drawBitmap(bitmap, 0f, 0f, paint)
-        return bmp
+        binding.btnContrast.setOnClickListener {
+            openAdjustmentSheet("대비") { value ->
+                applyContrast(value)
+            }
+        }
+
+        binding.btnSaturation.setOnClickListener {
+            openAdjustmentSheet("채도") { value ->
+                applySaturation(value)
+            }
+        }
     }
 
-    private fun applyContrast(src: Bitmap, value: Float): Bitmap {
-        // value: -100 ~ +100
-        val contrast = (value + 100) / 100f   // 0.0 ~ 2.0
+    private fun openAdjustmentSheet(title: String, onValueChange: (Int) -> Unit) {
+        val view = layoutInflater.inflate(R.layout.bottom_adjustment_sheet, null)
+        val tvTitle = view.findViewById<TextView>(R.id.tvTitle)
+        val seek = view.findViewById<SeekBar>(R.id.seekValue)
 
-        val cm = ColorMatrix(
-            floatArrayOf(
-                contrast, 0f, 0f, 0f, 0f,
-                0f, contrast, 0f, 0f, 0f,
-                0f, 0f, contrast, 0f, 0f,
-                0f, 0f, 0f, 1f, 0f
+        tvTitle.text = title
+        seek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(sb: SeekBar?, progress: Int, fromUser: Boolean) {
+                onValueChange(progress - 100) // -100 ~ +100
+            }
+            override fun onStartTrackingTouch(sb: SeekBar?) {}
+            override fun onStopTrackingTouch(sb: SeekBar?) {}
+        })
+
+        bottomSheet.setContentView(view)
+        bottomSheet.show()
+    }
+
+    private fun applyBrightness(value: Int) {
+        selectedBitmap?.let {
+            binding.imageView.setImageBitmap(
+                ImageFilters.adjustBrightness(it, value.toFloat())
             )
-        )
+        }
+    }
 
-        val ret = Bitmap.createBitmap(src.width, src.height, src.config)
-        val canvas = Canvas(ret)
-        val paint = Paint()
-        paint.colorFilter = ColorMatrixColorFilter(cm)
-        canvas.drawBitmap(src, 0f, 0f, paint)
+    private fun applyContrast(value: Int) {
+        selectedBitmap?.let {
+            binding.imageView.setImageBitmap(
+                ImageFilters.adjustContrast(it, value.toFloat())
+            )
+        }
+    }
 
-        return ret
+    private fun applySaturation(value: Int) {
+        selectedBitmap?.let {
+            binding.imageView.setImageBitmap(
+                ImageFilters.adjustSaturation(it, value.toFloat())
+            )
+        }
     }
 }
