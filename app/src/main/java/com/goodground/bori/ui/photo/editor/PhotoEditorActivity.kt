@@ -1,11 +1,15 @@
 package com.goodground.bori.ui.photo.editor
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.drawable.BitmapDrawable
 import android.os.Bundle
 import android.provider.MediaStore
+import android.view.MotionEvent
 import android.view.View
+import android.widget.Button
 import android.widget.SeekBar
 import android.widget.TextView
 import androidx.activity.result.ActivityResultLauncher
@@ -14,6 +18,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.goodground.bori.R
 import com.goodground.bori.databinding.ActivityPhotoEditorBinding
 import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.slider.Slider
 
 class PhotoEditorActivity : AppCompatActivity() {
 
@@ -47,6 +52,8 @@ class PhotoEditorActivity : AppCompatActivity() {
         binding.fabSelectImage.setOnClickListener {
             showImageSelectSheet()
         }
+
+        makeFabDraggableAndClickable()
     }
 
     private fun setupResultLauncher() {
@@ -71,8 +78,6 @@ class PhotoEditorActivity : AppCompatActivity() {
 
                 // 갤러리에서 받아온 Bitmap 넣기
                 originalBitmap = selectedBitmap?.copy(Bitmap.Config.ARGB_8888, true)!!
-
-//                enableTools()
             }
         }
     }
@@ -110,6 +115,72 @@ class PhotoEditorActivity : AppCompatActivity() {
         resultLauncher.launch(intent)
     }
 
+    @SuppressLint("ClickableViewAccessibility")
+    private fun makeFabDraggableAndClickable() {
+        var dX = 0f
+        var dY = 0f
+        var startX = 0f
+        var startY = 0f
+        var isDragging = false
+
+        val clickThreshold = 10
+
+        binding.fabSelectImage.setOnTouchListener { view, event ->
+            val parent = view.parent as View
+            val parentWidth = parent.width
+            val parentHeight = parent.height
+
+            when (event.action) {
+
+                MotionEvent.ACTION_DOWN -> {
+                    isDragging = false
+                    startX = event.rawX
+                    startY = event.rawY
+                    dX = view.x - event.rawX
+                    dY = view.y - event.rawY
+                }
+
+                MotionEvent.ACTION_MOVE -> {
+                    val deltaX = Math.abs(event.rawX - startX)
+                    val deltaY = Math.abs(event.rawY - startY)
+
+                    if (deltaX > clickThreshold || deltaY > clickThreshold) {
+                        isDragging = true
+                    }
+
+                    if (isDragging) {
+                        var newX = event.rawX + dX
+                        var newY = event.rawY + dY
+
+                        // 🔥 화면 경계 제한
+                        // 좌측 경계
+                        if (newX < 0f) newX = 0f
+                        // 우측 경계
+                        if (newX > parentWidth - view.width)
+                            newX = (parentWidth - view.width).toFloat()
+
+                        // 상단 경계
+                        if (newY < 0f) newY = 0f
+                        // 하단 경계
+                        if (newY > parentHeight - view.height)
+                            newY = (parentHeight - view.height).toFloat()
+
+                        // 위치 적용
+                        view.x = newX
+                        view.y = newY
+                    }
+                }
+
+                MotionEvent.ACTION_UP -> {
+                    if (!isDragging) {
+                        binding.fabSelectImage.performClick() // ← 클릭 처리
+                    }
+                }
+            }
+            true
+        }
+    }
+
     private fun setupToolButtons() {
         binding.btnBrightness.setOnClickListener {
             openAdjustmentSheet("밝기") { value ->
@@ -127,6 +198,10 @@ class PhotoEditorActivity : AppCompatActivity() {
             openAdjustmentSheet("채도") { value ->
                 applySaturation(value)
             }
+        }
+
+        binding.btnHue.setOnClickListener {
+            showHueDialog()
         }
     }
 
@@ -170,5 +245,28 @@ class PhotoEditorActivity : AppCompatActivity() {
                 ImageFilters.adjustSaturation(it, value.toFloat())
             )
         }
+    }
+
+    private fun showHueDialog() {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_hue, null)
+        val slider = dialogView.findViewById<Slider>(R.id.sliderHue)
+        val btnApply = dialogView.findViewById<Button>(R.id.btnApplyHue)
+
+        val dialog = BottomSheetDialog(this)
+        dialog.setContentView(dialogView)
+
+        slider.addOnChangeListener { _, value, _ ->
+            selectedBitmap?.let {
+                val preview = ImageFilters.adjustHue(it, value)
+                binding.imageView.setImageBitmap(preview)
+            }
+        }
+
+        btnApply.setOnClickListener {
+            selectedBitmap = (binding.imageView.drawable as BitmapDrawable).bitmap.copy(Bitmap.Config.ARGB_8888, true)
+            dialog.dismiss()
+        }
+
+        dialog.show()
     }
 }
