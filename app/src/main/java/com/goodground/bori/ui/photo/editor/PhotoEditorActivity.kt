@@ -183,8 +183,13 @@ class PhotoEditorActivity : AppCompatActivity() {
 
     private fun setupToolButtons() {
         binding.btnBrightness.setOnClickListener {
-            openAdjustmentSheet("밝기") { value ->
-                applyBrightness(value)
+            showAdjustmentSlider(
+                "Brightness",
+                -100,
+                100,
+                0) { value ->
+                editedBitmap = ImageFilters.adjustBrightness(originalBitmap!!, value.toFloat())
+                binding.imageView.setImageBitmap(editedBitmap)
             }
         }
 
@@ -202,6 +207,18 @@ class PhotoEditorActivity : AppCompatActivity() {
 
         binding.btnHue.setOnClickListener {
             showHueDialog()
+        }
+
+        binding.btnColorTemp.setOnClickListener {
+            showAdjustmentSlider(
+                title = "Color Temperature",
+                min = -100,
+                max = 100,
+                initial = 0
+            ) { value ->
+                editedBitmap = ImageFilters.adjustColorTemperature(originalBitmap!!, value)
+                binding.imageView.setImageBitmap(editedBitmap)
+            }
         }
     }
 
@@ -223,12 +240,40 @@ class PhotoEditorActivity : AppCompatActivity() {
         bottomSheet.show()
     }
 
-    private fun applyBrightness(value: Int) {
-        selectedBitmap?.let {
-            binding.imageView.setImageBitmap(
-                ImageFilters.adjustBrightness(it, value.toFloat())
-            )
-        }
+    private fun showAdjustmentSlider(
+        title: String,
+        min: Int = -100,
+        max: Int = 100,
+        initial: Int = 0,
+        onValueChanged: (Int) -> Unit
+    ) {
+        val dialog = BottomSheetDialog(this)
+        val view = layoutInflater.inflate(R.layout.dialog_slider_adjustment, null)
+        dialog.setContentView(view)
+
+        val tvTitle = view.findViewById<TextView>(R.id.tvTitle)
+        val tvValue = view.findViewById<TextView>(R.id.tvValue)
+        val slider = view.findViewById<SeekBar>(R.id.seekBar)
+
+        tvTitle.text = title
+
+        slider.max = max - min
+        slider.progress = initial - min
+        tvValue.text = initial.toString()
+
+        // 값 변경 이벤트
+        slider.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                val realValue = min + progress
+                tvValue.text = realValue.toString()
+                onValueChanged(realValue)
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
+
+        dialog.show()
     }
 
     private fun applyContrast(value: Int) {

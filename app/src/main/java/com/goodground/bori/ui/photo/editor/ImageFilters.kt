@@ -78,6 +78,37 @@ object ImageFilters {
         return applyColorMatrix(src, matrix)
     }
 
+    fun adjustColorTemperature(src: Bitmap, value: Int): Bitmap {
+        // value 범위: -100(차갑게) ~ +100(따뜻하게)
+        val bitmap = src.copy(Bitmap.Config.ARGB_8888, true)
+
+        val warm = value / 100f // -1.0 ~ +1.0
+
+        // 따뜻한 경우 → R과 G 증가
+        val rScale = 1f + (warm * 0.4f)
+        val gScale = 1f + (warm * 0.2f)
+
+        // 차가운 경우 → B 증가 (warm 음수일 때)
+        val bScale = 1f - (warm * 0.4f)
+
+        val cm = ColorMatrix(
+            floatArrayOf(
+                rScale, 0f,     0f,     0f, 0f,
+                0f,     gScale, 0f,     0f, 0f,
+                0f,     0f,     bScale, 0f, 0f,
+                0f,     0f,     0f,     1f, 0f
+            )
+        )
+
+        val paint = Paint()
+        paint.colorFilter = ColorMatrixColorFilter(cm)
+
+        val canvas = Canvas(bitmap)
+        canvas.drawBitmap(src, 0f, 0f, paint)
+
+        return bitmap
+    }
+
     /**
      * 🔥 Blur, Sharpen 같은 효과는 ColorMatrix로는 한계가 있으므로
      * Convolution Kernel 방식 별도로 준비
