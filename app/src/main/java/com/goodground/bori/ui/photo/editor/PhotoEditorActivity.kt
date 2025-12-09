@@ -220,6 +220,27 @@ class PhotoEditorActivity : AppCompatActivity() {
                 binding.imageView.setImageBitmap(editedBitmap)
             }
         }
+
+        binding.btnSharpen.setOnClickListener {
+            showAdjustmentSlider("Sharpen", 0, 100) { value ->
+                editedBitmap = ImageFilters.adjustSharpen(originalBitmap!!, value)
+                binding.imageView.setImageBitmap(editedBitmap)
+            }
+        }
+
+        binding.btnShadows.setOnClickListener {
+            showAdjustmentSlider("Shadows", 0) { value ->
+                editedBitmap = ImageFilters.adjustShadows(originalBitmap!!, value)
+                binding.imageView.setImageBitmap(editedBitmap)
+            }
+        }
+
+        binding.btnHighlights.setOnClickListener {
+            showAdjustmentSlider("Highlights", 0) { value ->
+                editedBitmap = ImageFilters.adjustHighlights(originalBitmap!!, value)
+                binding.imageView.setImageBitmap(editedBitmap)
+            }
+        }
     }
 
     private fun openAdjustmentSheet(title: String, onValueChange: (Int) -> Unit) {

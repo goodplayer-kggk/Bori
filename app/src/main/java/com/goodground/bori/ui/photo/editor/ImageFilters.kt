@@ -158,4 +158,146 @@ object ImageFilters {
         result.setPixels(output, 0, width, 0, 0, width, height)
         return result
     }
+
+    fun adjustSharpen(src: Bitmap, value: Int): Bitmap {
+        // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        // TODO: performance issue(O(n3)). need to change algorithm <<<<<<<<<<<<<<<<<<<<
+        // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+        val amount = value / 100f  // value: 0 ~ 100
+        if (amount <= 0f) return src
+
+        // sharpen kernel 동적 생성
+        val kernel = floatArrayOf(
+            0f, -amount, 0f,
+            -amount, 1f + (amount * 4f), -amount,
+            0f, -amount, 0f
+        )
+
+        return applyConvolution(src, kernel)
+    }
+
+    private fun applyConvolution(src: Bitmap, kernel: FloatArray): Bitmap {
+        val width = src.width
+        val height = src.height
+
+        val pixels = IntArray(width * height)
+        val outPixels = IntArray(width * height)
+        src.getPixels(pixels, 0, width, 0, 0, width, height)
+
+        // operation time is over O(n3).
+        // need to change this to GPU shader or tensorflowlite version
+        ///////////////////////////////
+        for (y in 1 until height - 1) {
+            for (x in 1 until width - 1) {
+
+                var r = 0f; var g = 0f; var b = 0f
+                var idx = 0
+
+                for (ky in -1..1) {
+                    val row = (y + ky) * width
+                    for (kx in -1..1) {
+                        val color = pixels[row + (x + kx)]
+                        val k = kernel[idx++]
+
+                        r += ((color shr 16) and 0xFF) * k
+                        g += ((color shr 8) and 0xFF) * k
+                        b += (color and 0xFF) * k
+                    }
+                }
+
+                outPixels[y * width + x] =
+                    (0xFF shl 24) or
+                            (r.coerceIn(0f, 255f).toInt() shl 16) or
+                            (g.coerceIn(0f, 255f).toInt() shl 8) or
+                            b.coerceIn(0f, 255f).toInt()
+            }
+        }
+
+        val result = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        result.setPixels(outPixels, 0, width, 0, 0, width, height)
+        return result
+    }
+
+    /**
+     * 밝은 영역(Highlights) 낮추기
+     * @param value -100 ~ +100
+     */
+    fun adjustHighlights(src: Bitmap, value: Int): Bitmap {
+        val factor = value / 100f
+        val width = src.width
+        val height = src.height
+
+        val pixels = IntArray(width * height)
+        val out = IntArray(width * height)
+        src.getPixels(pixels, 0, width, 0, 0, width, height)
+
+        for (i in pixels.indices) {
+            val c = pixels[i]
+
+            val r = (c shr 16) and 0xFF
+            val g = (c shr 8) and 0xFF
+            val b = c and 0xFF
+
+            val luminance = (0.299 * r + 0.587 * g + 0.114 * b).toInt()
+
+            val weight = luminance / 255f  // 밝을수록 1에 가까움
+
+            val newR = (r - (r * weight * factor)).coerceIn(0f, 255f)
+            val newG = (g - (g * weight * factor)).coerceIn(0f, 255f)
+            val newB = (b - (b * weight * factor)).coerceIn(0f, 255f)
+
+            out[i] =
+                (0xFF shl 24) or
+                        (newR.toInt() shl 16) or
+                        (newG.toInt() shl 8) or
+                        newB.toInt()
+        }
+
+        val result = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        result.setPixels(out, 0, width, 0, 0, width, height)
+        return result
+    }
+
+
+    /**
+     * 어두운 영역(Shadows) 밝게 만들기
+     * @param value -100 ~ +100
+     */
+    fun adjustShadows(src: Bitmap, value: Int): Bitmap {
+        val factor = value / 100f
+        val width = src.width
+        val height = src.height
+
+        val pixels = IntArray(width * height)
+        val out = IntArray(width * height)
+        src.getPixels(pixels, 0, width, 0, 0, width, height)
+
+        for (i in pixels.indices) {
+            val c = pixels[i]
+
+            val r = (c shr 16) and 0xFF
+            val g = (c shr 8) and 0xFF
+            val b = c and 0xFF
+
+            val luminance = (0.299 * r + 0.587 * g + 0.114 * b).toInt()
+
+            val weight = (255 - luminance) / 255f  // 어두울수록 1에 가까움
+
+            val newR = (r + (255 - r) * weight * factor).coerceIn(0f, 255f)
+            val newG = (g + (255 - g) * weight * factor).coerceIn(0f, 255f)
+            val newB = (b + (255 - b) * weight * factor).coerceIn(0f, 255f)
+
+            out[i] =
+                (0xFF shl 24) or
+                        (newR.toInt() shl 16) or
+                        (newG.toInt() shl 8) or
+                        newB.toInt()
+        }
+
+        val result = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        result.setPixels(out, 0, width, 0, 0, width, height)
+        return result
+    }
+
 }
