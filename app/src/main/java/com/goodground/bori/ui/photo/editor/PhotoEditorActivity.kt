@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.drawable.BitmapDrawable
 import android.os.Bundle
 import android.provider.MediaStore
@@ -17,6 +18,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import com.goodground.bori.R
 import com.goodground.bori.databinding.ActivityPhotoEditorBinding
+import com.goodground.bori.ui.photo.editor.blur.BlurEditorActivity
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.slider.Slider
 
@@ -31,6 +33,20 @@ class PhotoEditorActivity : AppCompatActivity() {
     private var currentContrast = 0f
 
     private lateinit var bottomSheet: BottomSheetDialog
+    private lateinit var currentImageUri: String
+
+    private val blurLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                val data = result.data ?: return@registerForActivityResult
+                val bytes = data.getByteArrayExtra(BlurEditorActivity.EXTRA_RESULT_BITMAP)
+                if (bytes != null) {
+                    val bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                    binding.imageView.setImageBitmap(bmp)
+                    editedBitmap = bmp
+                }
+            }
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -66,12 +82,14 @@ class PhotoEditorActivity : AppCompatActivity() {
                 // 갤러리 이미지
                 if (data?.data != null) {
                     val uri = data.data!!
+                    currentImageUri = uri.toString()
                     selectedBitmap = MediaStore.Images.Media.getBitmap(contentResolver, uri)
                     binding.imageView.setImageBitmap(selectedBitmap)
                 }
 
                 // 카메라 이미지
                 if (data?.extras?.get("data") != null) {
+                    currentImageUri = data.extras!!.toString()
                     selectedBitmap = data.extras!!.get("data") as Bitmap
                     binding.imageView.setImageBitmap(selectedBitmap)
                 }
@@ -240,6 +258,12 @@ class PhotoEditorActivity : AppCompatActivity() {
                 editedBitmap = ImageFilters.adjustHighlights(originalBitmap!!, value)
                 binding.imageView.setImageBitmap(editedBitmap)
             }
+        }
+
+        binding.btnBlur.setOnClickListener{
+            val intent = Intent(this, BlurEditorActivity::class.java)
+            intent.putExtra(BlurEditorActivity.EXTRA_IMAGE_URI, currentImageUri.toString())
+            blurLauncher.launch(intent)
         }
     }
 

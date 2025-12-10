@@ -5,6 +5,8 @@ import android.graphics.Canvas
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.Paint
+import kotlin.math.max
+import kotlin.math.min
 
 object ImageFilters {
 
@@ -300,4 +302,106 @@ object ImageFilters {
         return result
     }
 
+    fun fastBlur(src: Bitmap, radius: Int): Bitmap {
+        val r = radius.coerceIn(1, 100) // 필요하면 적당히 제한
+        // 항상 ARGB_8888로 작업
+        val bitmap = src.copy(Bitmap.Config.ARGB_8888, true)
+        val w = bitmap.width
+        val h = bitmap.height
+        val wh = w * h
+        val pix = IntArray(wh)
+        bitmap.getPixels(pix, 0, w, 0, 0, w, h)
+
+        // 작업용 배열
+        val rArr = IntArray(wh)
+        val gArr = IntArray(wh)
+        val bArr = IntArray(wh)
+
+        val div = r * 2 + 1
+        val dv = IntArray(256 * div)
+        for (i in dv.indices) dv[i] = i / div
+
+        // vmin 재사용 배열
+        val vmin = IntArray(max(w, h))
+
+        // --- 가로 패스 ---
+        var yi = 0
+        var yw = 0
+        for (y in 0 until h) {
+            var rsum = 0
+            var gsum = 0
+            var bsum = 0
+
+            // 초기 윈도우 합
+            for (i in -r..r) {
+                val xIndex = (i).coerceAtLeast(0).coerceAtMost(w - 1)
+                val p = pix[yw + xIndex]
+                rsum += (p shr 16) and 0xFF
+                gsum += (p shr 8) and 0xFF
+                bsum += p and 0xFF
+            }
+
+            for (x in 0 until w) {
+                // 안전한 인덱싱으로 저장
+                rArr[yi] = dv[rsum.coerceIn(0, dv.size - 1)]
+                gArr[yi] = dv[gsum.coerceIn(0, dv.size - 1)]
+                bArr[yi] = dv[bsum.coerceIn(0, dv.size - 1)]
+
+                // 다음 x로 슬라이딩 윈도우: 빠진 픽과 들어오는 픽 계산
+                val addX = (x + r + 1).coerceAtMost(w - 1)
+                val subX = (x - r).coerceAtLeast(0)
+
+                val pAdd = pix[yw + addX]
+                val pSub = pix[yw + subX]
+
+                rsum += ((pAdd shr 16) and 0xFF) - ((pSub shr 16) and 0xFF)
+                gsum += ((pAdd shr 8) and 0xFF) - ((pSub shr 8) and 0xFF)
+                bsum += (pAdd and 0xFF) - (pSub and 0xFF)
+
+                yi++
+            }
+            yw += w
+        }
+
+        // --- 세로 패스 ---
+        for (x in 0 until w) {
+            var rsum = 0
+            var gsum = 0
+            var bsum = 0
+            // 초기 윈도우 합 (세로)
+            for (i in -r..r) {
+                val yIndex = (i).coerceAtLeast(0).coerceAtMost(h - 1)
+                val idx = (yIndex * w + x)
+                rsum += rArr[idx]
+                gsum += gArr[idx]
+                bsum += bArr[idx]
+            }
+
+            var yi2 = x
+            for (y in 0 until h) {
+                // 안전하게 픽셀이할당
+                val rr = dv[rsum.coerceIn(0, dv.size - 1)]
+                val gg = dv[gsum.coerceIn(0, dv.size - 1)]
+                val bb = dv[bsum.coerceIn(0, dv.size - 1)]
+                pix[yi2] = (0xFF shl 24) or (rr shl 16) or (gg shl 8) or bb
+
+                // 슬라이드 윈도우: 들어오고 나가는 y 좌표 계산
+                val addY = (y + r + 1).coerceAtMost(h - 1)
+                val subY = (y - r).coerceAtLeast(0)
+
+                val addIdx = addY * w + x
+                val subIdx = subY * w + x
+
+                rsum += rArr[addIdx] - rArr[subIdx]
+                gsum += gArr[addIdx] - gArr[subIdx]
+                bsum += bArr[addIdx] - bArr[subIdx]
+
+                yi2 += w
+            }
+        }
+
+        val out = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        out.setPixels(pix, 0, w, 0, 0, w, h)
+        return out
+    }
 }

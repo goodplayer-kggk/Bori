@@ -33,6 +33,7 @@
 <!--            </intent-filter>-->
         </activity>
         <activity android:name=".ui.photo.editor.PhotoEditorActivity"/>
+        <activity android:name=".ui.photo.editor.blur.BlurEditorActivity"/>
     </application>
 
 </manifest>
