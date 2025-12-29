@@ -404,4 +404,88 @@ object ImageFilters {
         out.setPixels(pix, 0, w, 0, 0, w, h)
         return out
     }
+
+    fun applyVignette(
+        src: Bitmap,
+        strength: Float // 0f ~ 1f
+    ): Bitmap {
+        val width = src.width
+        val height = src.height
+
+        val result = src.copy(Bitmap.Config.ARGB_8888, true)
+        val pixels = IntArray(width * height)
+        result.getPixels(pixels, 0, width, 0, 0, width, height)
+
+        val cx = width / 2f
+        val cy = height / 2f
+        val maxDist = Math.hypot(cx.toDouble(), cy.toDouble()).toFloat()
+
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                val index = y * width + x
+                val color = pixels[index]
+
+                val a = color ushr 24
+                val r = (color shr 16) and 0xFF
+                val g = (color shr 8) and 0xFF
+                val b = color and 0xFF
+
+                val dx = x - cx
+                val dy = y - cy
+                val dist = Math.hypot(dx.toDouble(), dy.toDouble()).toFloat()
+
+                // 0 ~ 1
+                val ratio = dist / maxDist
+
+                // 부드러운 비네팅 곡선 (smoothstep)
+                val vignette = 1f - strength * ratio * ratio
+
+                val nr = (r * vignette).toInt().coerceIn(0, 255)
+                val ng = (g * vignette).toInt().coerceIn(0, 255)
+                val nb = (b * vignette).toInt().coerceIn(0, 255)
+
+                pixels[index] =
+                    (a shl 24) or (nr shl 16) or (ng shl 8) or nb
+            }
+        }
+
+        result.setPixels(pixels, 0, width, 0, 0, width, height)
+        return result
+    }
+
+    fun applyFilmGrain(src: Bitmap, intensity: Float): Bitmap {
+        val w = src.width
+        val h = src.height
+
+        val result = src.copy(Bitmap.Config.ARGB_8888, true)
+        val pixels = IntArray(w * h)
+        result.getPixels(pixels, 0, w, 0, 0, w, h)
+
+        val random = java.util.Random()
+
+        for (i in pixels.indices) {
+            val p = pixels[i]
+
+            val a = (p shr 24) and 0xFF
+            var r = (p shr 16) and 0xFF
+            var g = (p shr 8) and 0xFF
+            var b = p and 0xFF
+
+            // 밝기 (luma)
+            val luma = (0.299f * r + 0.587f * g + 0.114f * b) / 255f
+            val weight = 1f - luma
+
+            // 흑백 노이즈
+            val noise = (random.nextFloat() * 2f - 1f) * intensity * weight * 40f
+
+            r = (r + noise).toInt().coerceIn(0, 255)
+            g = (g + noise).toInt().coerceIn(0, 255)
+            b = (b + noise).toInt().coerceIn(0, 255)
+
+            pixels[i] = (a shl 24) or (r shl 16) or (g shl 8) or b
+        }
+
+        result.setPixels(pixels, 0, w, 0, 0, w, h)
+        return result
+    }
 }

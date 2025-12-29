@@ -16,11 +16,15 @@ import android.widget.TextView
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import com.goodground.bori.R
 import com.goodground.bori.databinding.ActivityPhotoEditorBinding
 import com.goodground.bori.ui.photo.editor.blur.BlurEditorActivity
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.slider.Slider
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class PhotoEditorActivity : AppCompatActivity() {
 
@@ -265,6 +269,34 @@ class PhotoEditorActivity : AppCompatActivity() {
             intent.putExtra(BlurEditorActivity.EXTRA_IMAGE_URI, currentImageUri.toString())
             blurLauncher.launch(intent)
         }
+
+        binding.btnVignette.setOnClickListener {
+            showAdjustmentSlider(
+                title = "Vignette",
+                min = 0,
+                max = 100,
+                initial = 0
+            ) { value ->
+                val strength = value / 100f
+
+                applyFilter {
+                    ImageFilters.applyVignette(it, strength)
+                }
+            }
+        }
+
+        binding.btnFilmGrain.setOnClickListener{
+            showAdjustmentSlider(
+                title = "Film Grain",
+                min = 0,
+                max = 100,
+                initial = 20
+            ) { value ->
+                val grain = value / 100f
+                selectedBitmap = selectedBitmap?.let { it1 -> ImageFilters.applyFilmGrain(it1, grain) }!!
+                binding.imageView.setImageBitmap(selectedBitmap)
+            }
+        }
     }
 
     private fun openAdjustmentSheet(title: String, onValueChange: (Int) -> Unit) {
@@ -358,5 +390,18 @@ class PhotoEditorActivity : AppCompatActivity() {
         }
 
         dialog.show()
+    }
+
+    private fun applyFilter(
+        filter: (Bitmap) -> Bitmap
+    ) {
+        lifecycleScope.launch(Dispatchers.Default) {
+            val filtered = selectedBitmap?.let { filter(it) }
+
+            withContext(Dispatchers.Main) {
+                selectedBitmap = filtered
+                binding.imageView.setImageBitmap(filtered)
+            }
+        }
     }
 }
