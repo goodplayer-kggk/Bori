@@ -297,6 +297,17 @@ class PhotoEditorActivity : AppCompatActivity() {
                 binding.imageView.setImageBitmap(selectedBitmap)
             }
         }
+
+        binding.btnTintPreset.setOnClickListener {
+            TintBottomSheetDialog(this@PhotoEditorActivity) { color, strength ->
+                selectedBitmap = ImageFilters.applyTint(
+                    originalBitmap,
+                    color,
+                    strength
+                )
+                binding.imageView.setImageBitmap(selectedBitmap)
+            }.show()
+        }
     }
 
     private fun openAdjustmentSheet(title: String, onValueChange: (Int) -> Unit) {

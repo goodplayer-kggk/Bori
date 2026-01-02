@@ -2,11 +2,11 @@ package com.goodground.bori.ui.photo.editor
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.Paint
 import kotlin.math.max
-import kotlin.math.min
 
 object ImageFilters {
 
@@ -486,6 +486,44 @@ object ImageFilters {
         }
 
         result.setPixels(pixels, 0, w, 0, 0, w, h)
+        return result
+    }
+
+    fun applyTint(
+        src: Bitmap,
+        tintColor: Int,
+        strength: Float   // 0.0 ~ 1.0
+    ): Bitmap {
+        val width = src.width
+        val height = src.height
+
+        val result = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+
+        val pixels = IntArray(width * height)
+        src.getPixels(pixels, 0, width, 0, 0, width, height)
+
+        val tintR = Color.red(tintColor)
+        val tintG = Color.green(tintColor)
+        val tintB = Color.blue(tintColor)
+
+        val s = strength.coerceIn(0f, 1f)
+
+        for (i in pixels.indices) {
+            val c = pixels[i]
+
+            val a = Color.alpha(c)
+            val r = Color.red(c)
+            val g = Color.green(c)
+            val b = Color.blue(c)
+
+            val nr = (r * (1 - s) + tintR * s).toInt().coerceIn(0, 255)
+            val ng = (g * (1 - s) + tintG * s).toInt().coerceIn(0, 255)
+            val nb = (b * (1 - s) + tintB * s).toInt().coerceIn(0, 255)
+
+            pixels[i] = Color.argb(a, nr, ng, nb)
+        }
+
+        result.setPixels(pixels, 0, width, 0, 0, width, height)
         return result
     }
 }
